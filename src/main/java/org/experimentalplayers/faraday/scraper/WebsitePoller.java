@@ -119,7 +119,7 @@ public class WebsitePoller {
 		}
 
 		int newEntries = newEntriesQueries.size();
-		log.info("Added " + newEntries + " new entrie(s) in archive");
+		log.info("Added " + newEntries + " new entry(s) in archive");
 
 		for(ArchiveEntry webEntry : webEntries)
 			if(!dbEntries.containsKey(webEntry.getId()))
