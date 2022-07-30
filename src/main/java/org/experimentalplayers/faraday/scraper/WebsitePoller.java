@@ -2,22 +2,23 @@ package org.experimentalplayers.faraday.scraper;
 
 import com.google.api.core.ApiFuture;
 import com.google.api.core.ApiFutures;
-import com.google.cloud.firestore.CollectionReference;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.WriteResult;
+import com.google.cloud.Timestamp;
+import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
 import lombok.extern.log4j.Log4j2;
 import org.experimentalplayers.faraday.beans.WebRef;
 import org.experimentalplayers.faraday.models.ArchiveEntry;
+import org.experimentalplayers.faraday.models.Attachment;
+import org.experimentalplayers.faraday.models.SiteDocument;
+import org.experimentalplayers.faraday.models.rss.RSSItem;
+import org.experimentalplayers.faraday.models.rss.RSSMain;
 import org.experimentalplayers.faraday.services.FirebaseAdminService;
-import org.experimentalplayers.faraday.utils.Mappings;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -25,10 +26,13 @@ import java.util.stream.Collectors;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.experimentalplayers.faraday.models.DocumentType.AVVISO;
 import static org.experimentalplayers.faraday.models.DocumentType.CIRCOLARE;
+import static org.experimentalplayers.faraday.utils.Mappings.*;
 
 @Log4j2
 @Service
 public class WebsitePoller {
+
+	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("EEE, dd MMM yy HH:mm:ss X");
 
 	private final FirebaseAdminService fbAdmin;
 
@@ -47,6 +51,121 @@ public class WebsitePoller {
 	 */
 	@Scheduled(fixedRate = 15, timeUnit = MINUTES)
 	public void updateCircolari() {
+
+		String circolariFeed = webref.getFeedCircolari();
+		RSSMain rss;
+
+		// TODO: base_url check
+
+		// Get feed
+		try {
+
+			rss = scraper.feed(circolariFeed + "?format=feed&amp;type=rss");
+
+		} catch(IOException e) {
+			log.warn("Couldn't update circolari", e);
+			return;
+		}
+
+		List<RSSItem> feedDocs = rss.getItems();
+
+		// Retrieve doc urls from feed
+		List<String> docUrls = feedDocs.stream()
+				.map(RSSItem::getLink)
+				.collect(Collectors.toList());
+
+		Firestore db = FirestoreClient.getFirestore();
+		Set<String> dbDocUrls;
+
+		// Get doc urls from db that match the feed ones
+		try {
+
+			dbDocUrls = db.collection(DOCUMENTS)
+					.whereIn("pageUrl", docUrls)
+					.get()
+					.get()
+					.toObjects(SiteDocument.class)
+					.stream()
+					.map(SiteDocument::getPageUrl)
+					.collect(Collectors.toSet());
+
+		} catch(Exception e) {
+			log.warn("Couldn't get SiteDocuments from db", e);
+			return;
+		}
+
+		List<SiteDocument> siteDocs = new LinkedList<>();
+
+		// For doc urls not in db
+		for(RSSItem feedDoc : feedDocs)
+			if(!dbDocUrls.contains(feedDoc.getLink()))
+				try {
+
+					// Get document from site and fill missing
+					SiteDocument d = scraper.document(feedDoc.getLink())
+							.title(feedDoc.getTitle())
+							.type(CIRCOLARE)
+							.category(feedDoc.getCategory())
+							.publishDate(Timestamp.of(DATE_FORMAT.parse(feedDoc.getPubDate())))
+							.build();
+
+					siteDocs.add(d);
+
+				} catch(Exception e) {
+					log.warn("Couldn't scrape SiteDocument from site", e);
+				}
+
+		if(siteDocs.isEmpty()) {
+			log.info("No new circolari");
+			return;
+		}
+
+		// Open batch to save all new attachments
+		WriteBatch batch = db.batch();
+
+		CollectionReference attachmentsCollection = db.collection(ATTACHMENTS);
+
+		// Save attachments in dedicated collection
+		for(SiteDocument siteDoc : siteDocs) {
+
+			List<DocumentReference> atRefs = new LinkedList<>();
+
+			for(Attachment attachment : siteDoc.getDerefAttachments()) {
+
+				// Create new document (autogen. id)
+				DocumentReference atRef = attachmentsCollection.document();
+
+				// Save new id
+				attachment.setId(atRef.getId());
+				// Save reference in list
+				atRefs.add(atRef);
+
+				// Write attachment in batch
+				batch.set(atRef, attachment);
+
+			}
+
+			// Save all attachments references in SiteDocument
+			siteDoc.setAttachments(atRefs);
+
+		}
+
+		// Commit batch and pray
+		batch.commit();
+
+		CollectionReference documentsCollection = db.collection(DOCUMENTS);
+
+		// Open new batch for SiteDocuments
+		batch = db.batch();
+
+		// Save all new SiteDocuments
+		for(SiteDocument siteDoc : siteDocs)
+			batch.set(documentsCollection.document(), siteDoc);
+
+		// Commit batch and pray
+		batch.commit();
+
+		log.info("Saved (hopefully) " + siteDocs.size() + " new circolari");
 
 	}
 
@@ -77,7 +196,7 @@ public class WebsitePoller {
 		}
 
 		Firestore db = FirestoreClient.getFirestore();
-		CollectionReference archive = db.collection(Mappings.ARCHIVE);
+		CollectionReference archive = db.collection(ARCHIVE);
 
 		Map<String, ArchiveEntry> dbEntries;
 

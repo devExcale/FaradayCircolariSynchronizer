@@ -3,8 +3,8 @@ package org.experimentalplayers.faraday.models;
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.annotation.DocumentId;
+import com.google.cloud.firestore.annotation.Exclude;
 import com.google.firebase.cloud.FirestoreClient;
-import com.google.firebase.database.Exclude;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
 
@@ -31,6 +31,7 @@ public class SiteDocument {
 	private List<DocumentReference> attachments;
 
 	@ToString.Exclude
+	@Exclude
 	private List<Attachment> derefAttachments;
 
 	private Timestamp publishDate;

@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -28,7 +29,7 @@ import static org.experimentalplayers.faraday.models.DocumentType.UNKNOWN;
 @Service
 public class WebsiteScraper {
 
-	private static final String ATTACHMENT_CONTAINER = ".attachmentsContainer";
+	private static final String ATTACHMENT_CONTAINER = "div.attachmentsContainer";
 
 	private static final String ATTACHMENT_ITEM = "tr";
 
@@ -38,7 +39,14 @@ public class WebsiteScraper {
 
 	private static final String ARTICLE_BODY = "div.item-page > div";
 
-	public SiteDocument document(String url) throws IOException {
+	/**
+	 * Sets only pageUrl, snippet and setDerefAttachments!
+	 * Everything else needs to be set by builder.
+	 *
+	 * @param url
+	 * @return
+	 */
+	public SiteDocument.SiteDocumentBuilder document(String url) throws IOException {
 
 		// TODO: exceptions
 		Document page = Jsoup.connect(url)
@@ -83,8 +91,7 @@ public class WebsiteScraper {
 		return SiteDocument.builder()
 				.pageUrl(url)
 				.snippet(snippet)
-				.derefAttachments(attachments)
-				.build();
+				.derefAttachments(attachments);
 	}
 
 	public RSSMain feed(String baseUri) throws JsonProcessingException {
