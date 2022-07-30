@@ -1,15 +1,19 @@
 package org.experimentalplayers.faraday.models;
 
 import com.google.cloud.Timestamp;
-import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.annotation.DocumentId;
-import com.google.cloud.firestore.annotation.Exclude;
-import com.google.firebase.cloud.FirestoreClient;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
+import org.jetbrains.annotations.NotNull;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.LinkedList;
 import java.util.List;
+
+import static org.experimentalplayers.faraday.utils.Statics.bytesToHex;
 
 @Log4j2
 @ToString
@@ -18,6 +22,40 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 public class SiteDocument {
+
+	public static String idFromUrl(String url) {
+
+		try {
+
+			return idFromUrl(new URL(url));
+
+		} catch(Exception ignored) {
+			return "";
+		}
+
+	}
+
+	@NotNull
+	public static String idFromUrl(URL url) {
+
+		String path = url.getPath();
+
+		MessageDigest md;
+
+		try {
+
+			md = MessageDigest.getInstance("SHA-256");
+			md.update(path.getBytes());
+
+		} catch(NoSuchAlgorithmException e) {
+			// Should happen only if no SHA-256 hashing implementation was found
+			// Not a recurring thing, hence the RuntimeException
+			throw new RuntimeException(e);
+		}
+
+
+		return bytesToHex(md.digest());
+	}
 
 	@DocumentId
 	private String id;
@@ -28,11 +66,7 @@ public class SiteDocument {
 
 	private String pageUrl;
 
-	private List<DocumentReference> attachments;
-
-	@ToString.Exclude
-	@Exclude
-	private List<Attachment> derefAttachments;
+	private List<Attachment> attachments;
 
 	private Timestamp publishDate;
 
@@ -42,61 +76,24 @@ public class SiteDocument {
 
 	public SiteDocument() {
 		attachments = new LinkedList<>();
-		derefAttachments = new LinkedList<>();
 	}
 
-	public List<DocumentReference> getAttachments() {
+	public String getId() {
 
-		if(attachments == null)
-			attachments = new LinkedList<>();
+		if(id != null && !id.isEmpty())
+			return id;
 
-		return attachments;
-	}
-
-	@Exclude
-	public void setDerefAttachments(List<Attachment> derefAttachments) {
-		this.derefAttachments = derefAttachments;
-	}
-
-	@Exclude
-	public List<Attachment> getDerefAttachments() {
-
-		if(derefAttachments == null)
-			derefAttachments = new LinkedList<>();
-
-		if(!getAttachments().isEmpty() && derefAttachments.isEmpty())
-			updateAttachmentsFromReferences();
-
-		return derefAttachments;
-	}
-
-	@Exclude
-	public List<Attachment> updateAttachmentsFromReferences() {
-
-		if(derefAttachments == null)
-			derefAttachments = new LinkedList<>();
-		else
-			derefAttachments.clear();
-
-		if(attachments.isEmpty())
-			return derefAttachments;
+		if(pageUrl == null)
+			return null;
 
 		try {
 
-			FirestoreClient.getFirestore()
-					.getAll(this.attachments.toArray(new DocumentReference[0]))
-					.get()
-					.stream()
-					.map(snap -> snap.toObject(Attachment.class))
-					.forEach(derefAttachments::add);
+			id = idFromUrl(new URL(pageUrl));
 
-		} catch(Exception e) {
-
-			log.warn("Couldn't get Attachments from references", e);
-
+		} catch(MalformedURLException ignored) {
 		}
 
-		return derefAttachments;
+		return id;
 	}
 
 }

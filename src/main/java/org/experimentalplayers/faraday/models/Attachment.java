@@ -1,6 +1,5 @@
 package org.experimentalplayers.faraday.models;
 
-import com.google.cloud.firestore.annotation.DocumentId;
 import lombok.*;
 
 @ToString
@@ -10,9 +9,6 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Attachment {
-
-	@DocumentId
-	private String id;
 
 	private String filename;
 

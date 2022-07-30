@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -91,11 +90,12 @@ public class WebsiteScraper {
 		return SiteDocument.builder()
 				.pageUrl(url)
 				.snippet(snippet)
-				.derefAttachments(attachments);
+				.attachments(attachments);
 	}
 
 	public RSSMain feed(String baseUri) throws JsonProcessingException {
 
+		// TODO: constant base_url?
 		String body = WebClient.create("https://www.itifaraday.edu.it")
 				.get()
 				.uri(baseUri + "?format=feed&type=rss")
