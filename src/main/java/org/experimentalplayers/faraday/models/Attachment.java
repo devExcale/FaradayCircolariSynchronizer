@@ -2,9 +2,7 @@ package org.experimentalplayers.faraday.models;
 
 import lombok.*;
 
-@ToString
-@Getter
-@Setter
+@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

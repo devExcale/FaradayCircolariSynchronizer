@@ -2,7 +2,10 @@ package org.experimentalplayers.faraday.models;
 
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.annotation.DocumentId;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
 
@@ -16,9 +19,7 @@ import java.util.List;
 import static org.experimentalplayers.faraday.utils.Statics.bytesToHex;
 
 @Log4j2
-@ToString
-@Getter
-@Setter
+@Data
 @Builder
 @AllArgsConstructor
 public class SiteDocument {
@@ -66,6 +67,7 @@ public class SiteDocument {
 
 	private String pageUrl;
 
+	@EqualsAndHashCode.Exclude
 	private List<Attachment> attachments;
 
 	private Timestamp publishDate;
