@@ -23,9 +23,13 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.lang.Integer.parseInt;
+import static java.lang.Math.max;
 import static org.experimentalplayers.faraday.models.DocumentType.UNKNOWN;
 
 @Log4j2
@@ -44,6 +48,8 @@ public class WebsiteScraper {
 
 	private static final String ARTICLE_BODY = "div.item-page > div";
 
+	private static final Pattern ARTICLE_ID_REGEX = Pattern.compile("^\\d+");
+
 	/**
 	 * Sets only pageUrl, snippet and setDerefAttachments!
 	 * Everything else needs to be set by builder.
@@ -60,6 +66,7 @@ public class WebsiteScraper {
 		SiteDocumentBuilder builder = SiteDocument.builder()
 				.pageUrl(url);
 
+		documentSetArticleId(builder, url);
 		documentSetTitleAndPublishDate(builder, page);
 		documentSetAttachments(builder, page);
 		documentSetSnippet(builder, page);
@@ -134,6 +141,21 @@ public class WebsiteScraper {
 				.orElse("");
 
 		builder.snippet(snippet);
+
+	}
+
+	public void documentSetArticleId(@NotNull SiteDocumentBuilder builder, @NotNull String url) {
+
+		String[] split = url.split("/");
+
+		if(split[0].isEmpty())
+			return;
+
+		Matcher matcher = ARTICLE_ID_REGEX.matcher(split[max(0, split.length - 1)]);
+		if(!matcher.find())
+			return;
+
+		builder.articleId(parseInt(matcher.group()));
 
 	}
 

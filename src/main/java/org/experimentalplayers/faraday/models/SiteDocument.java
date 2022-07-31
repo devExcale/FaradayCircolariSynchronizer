@@ -72,6 +72,8 @@ public class SiteDocument {
 
 	private Timestamp publishDate;
 
+	private Integer articleId;
+
 	private DocumentType type;
 
 	private String category;
