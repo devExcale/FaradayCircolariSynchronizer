@@ -23,13 +23,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.lang.Integer.parseInt;
-import static java.lang.Math.max;
 import static org.experimentalplayers.faraday.models.DocumentType.UNKNOWN;
 
 @Log4j2
@@ -54,19 +50,18 @@ public class WebsiteScraper {
 	 * Sets only pageUrl, snippet and setDerefAttachments!
 	 * Everything else needs to be set by builder.
 	 *
-	 * @param url
+	 * @param docUrl
 	 * @return
 	 */
-	public SiteDocumentBuilder document(String url) throws IOException {
+	public SiteDocumentBuilder document(String docUrl) throws IOException {
 
 		// TODO: exceptions
-		Document page = Jsoup.connect(url)
+		Document page = Jsoup.connect(docUrl)
 				.get();
 
 		SiteDocumentBuilder builder = SiteDocument.builder()
-				.pageUrl(url);
+				.pageUrl(docUrl);
 
-		documentSetArticleId(builder, url);
 		documentSetTitleAndPublishDate(builder, page);
 		documentSetAttachments(builder, page);
 		documentSetSnippet(builder, page);
@@ -141,21 +136,6 @@ public class WebsiteScraper {
 				.orElse("");
 
 		builder.snippet(snippet);
-
-	}
-
-	public void documentSetArticleId(@NotNull SiteDocumentBuilder builder, @NotNull String url) {
-
-		String[] split = url.split("/");
-
-		if(split[0].isEmpty())
-			return;
-
-		Matcher matcher = ARTICLE_ID_REGEX.matcher(split[max(0, split.length - 1)]);
-		if(!matcher.find())
-			return;
-
-		builder.articleId(parseInt(matcher.group()));
 
 	}
 

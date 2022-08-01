@@ -15,7 +15,11 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import static java.lang.Integer.parseInt;
+import static java.lang.Math.max;
 import static org.experimentalplayers.faraday.utils.Statics.bytesToHex;
 
 @Log4j2
@@ -23,6 +27,8 @@ import static org.experimentalplayers.faraday.utils.Statics.bytesToHex;
 @Builder
 @AllArgsConstructor
 public class SiteDocument {
+
+	private static final Pattern ARTICLE_ID_REGEX = Pattern.compile("^\\d+");
 
 	public static String idFromUrl(String url) {
 
@@ -56,6 +62,19 @@ public class SiteDocument {
 
 
 		return bytesToHex(md.digest());
+	}
+
+	public static Integer articleIdFromUrl(String url) {
+
+		String[] split = url.split("/");
+		if(split[0].isEmpty())
+			return null;
+
+		Matcher matcher = ARTICLE_ID_REGEX.matcher(split[max(0, split.length - 1)]);
+		if(!matcher.find())
+			return null;
+
+		return parseInt(matcher.group());
 	}
 
 	@DocumentId
@@ -98,6 +117,16 @@ public class SiteDocument {
 		}
 
 		return id;
+	}
+
+	public Integer getArticleId() {
+
+		if(articleId != null)
+			return articleId;
+
+		articleId = articleIdFromUrl(pageUrl);
+
+		return articleId;
 	}
 
 }
