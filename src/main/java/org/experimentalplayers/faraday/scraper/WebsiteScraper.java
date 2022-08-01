@@ -44,7 +44,40 @@ public class WebsiteScraper {
 
 	private static final String ARTICLE_BODY = "div.item-page > div";
 
-	private static final Pattern ARTICLE_ID_REGEX = Pattern.compile("^\\d+");
+	private static final String DOCUMENT_BATCH_ITEM = "form#adminForm td.list-title > a";
+
+	public Stream<SiteDocumentBuilder> batchDocuments(String archiveUrl) throws IOException {
+
+		Document page = Jsoup.connect(archiveUrl)
+				.data("limit", "0")
+				.post();
+
+		return page.select(DOCUMENT_BATCH_ITEM)
+				.parallelStream()
+				.map(a -> {
+
+					String href = a.attr("abs:href");
+
+					if(href.isEmpty()) {
+						log.warn("Couldn't extract document url while batching, follows html\n{}", a.parent());
+						href = null;
+					}
+
+					return href;
+				})
+				.filter(Objects::nonNull)
+				.map(url -> {
+					try {
+
+						return document(url);
+
+					} catch(IOException e) {
+						log.warn("Couldn't scrape document from site", e);
+						return null;
+					}
+				})
+				.filter(Objects::nonNull);
+	}
 
 	/**
 	 * Sets only pageUrl, snippet and setDerefAttachments!
