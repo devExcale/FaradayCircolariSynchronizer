@@ -80,6 +80,8 @@ public class SiteDocument {
 	@DocumentId
 	private String id;
 
+	private Integer articleId;
+
 	private String title;
 
 	private String snippet;
@@ -91,11 +93,11 @@ public class SiteDocument {
 
 	private Timestamp publishDate;
 
-	private Integer articleId;
-
 	private DocumentType type;
 
 	private String category;
+
+	private String schoolYear;
 
 	public SiteDocument() {
 		attachments = new LinkedList<>();

@@ -151,7 +151,7 @@ public class WebsitePoller {
 	//	}
 
 	// TODO: move segments in methods
-	public void updateSiteDocuments(DocumentType type, String feedUrl) {
+	public void updateSiteDocuments(DocumentType type, String feedUrl, String schoolYear) {
 
 		if(type == UNKNOWN)
 			throw new IllegalArgumentException("Unknown SiteDocument type");
@@ -227,6 +227,7 @@ public class WebsitePoller {
 							.title(docMeta.getTitle())
 							.type(type)
 							.category(docMeta.getCategory())
+							.schoolYear(schoolYear)
 							.publishDate(Timestamp.of(DATE_FORMAT.parse(docMeta.getPubDate())))
 							.build();
 
@@ -266,14 +267,14 @@ public class WebsitePoller {
 	@Scheduled(cron = CRON_EXP_CIRCOLARI, zone = "Europe/Rome")
 	public void updateCircolari() {
 
-		updateSiteDocuments(CIRCOLARE, webref.getFeedCircolari());
+		updateSiteDocuments(CIRCOLARE, webref.getFeedCircolari(), webref.getSchoolYearCircolari());
 
 	}
 
 	@Scheduled(cron = CRON_EXP_AVVISI, zone = "Europe/Rome")
 	public void updateAvvisi() {
 
-		updateSiteDocuments(AVVISO, webref.getFeedAvvisi());
+		updateSiteDocuments(AVVISO, webref.getFeedAvvisi(), webref.getSchoolYearAvvisi());
 
 	}
 
@@ -344,15 +345,24 @@ public class WebsitePoller {
 		// Whether to upload WebRef
 		AtomicBoolean updated = new AtomicBoolean(false);
 
+		String feedCircolari = webref.getFeedCircolari();
+		String feedAvvisi = webref.getFeedAvvisi();
+		String schoolYearCircolari = webref.getSchoolYearCircolari();
+		String schoolYearAvvisi = webref.getSchoolYearAvvisi();
+
 		// Get latest archive for circolari
 		dbEntries.values()
 				.stream()
 				.filter(entry -> entry.getType() == CIRCOLARE)
 				.max(Comparator.comparingInt(ArchiveEntry::getStartYear))
-				.map(ArchiveEntry::getUrl)
-				.filter(url -> !url.equals(webref.getFeedCircolari()))
-				.ifPresent(url -> {
-					webref.setFeedCircolari(url);
+				// Check if WebRef values differ
+				.filter(arc -> !arc.getUrl()
+						.equals(feedCircolari) || !arc.getSchoolYear()
+						.equals(schoolYearCircolari))
+				// Update WebRef if values differ
+				.ifPresent(arc -> {
+					webref.setFeedCircolari(arc.getUrl());
+					webref.setSchoolYearCircolari(arc.getSchoolYear());
 					updated.set(true);
 				});
 
@@ -361,12 +371,17 @@ public class WebsitePoller {
 				.stream()
 				.filter(entry -> entry.getType() == AVVISO)
 				.max(Comparator.comparingInt(ArchiveEntry::getStartYear))
-				.map(ArchiveEntry::getUrl)
-				.filter(url -> !url.equals(webref.getFeedAvvisi()))
-				.ifPresent(url -> {
-					webref.setFeedAvvisi(url);
+				// Check if WebRef values differ
+				.filter(arc -> !arc.getUrl()
+						.equals(feedAvvisi) || !arc.getSchoolYear()
+						.equals(schoolYearAvvisi))
+				// Update WebRef if values differ
+				.ifPresent(arc -> {
+					webref.setFeedAvvisi(arc.getUrl());
+					webref.setSchoolYearAvvisi(arc.getSchoolYear());
 					updated.set(true);
 				});
+
 
 		if(updated.get())
 			fbAdmin.uploadWebRef();
