@@ -35,6 +35,8 @@ import static org.experimentalplayers.faraday.models.DocumentType.*;
 import static org.experimentalplayers.faraday.utils.Mappings.ARCHIVE;
 import static org.experimentalplayers.faraday.utils.Mappings.DOCUMENTS;
 
+@SuppressWarnings("ScheduledMethodInspection")
+
 @Log4j2
 @Service
 public class WebsitePoller {
@@ -151,7 +153,7 @@ public class WebsitePoller {
 	//	}
 
 	// TODO: move segments in methods
-	public void updateSiteDocuments(DocumentType type, String feedUrl, String schoolYear) {
+	public int updateSiteDocuments(DocumentType type, String feedUrl, String schoolYear) {
 
 		if(type == UNKNOWN)
 			throw new IllegalArgumentException("Unknown SiteDocument type");
@@ -167,8 +169,8 @@ public class WebsitePoller {
 			rss = scraper.feed(feedUrl + "?format=feed&amp;type=rss");
 
 		} catch(Exception e) {
-			log.warn("Couldn't update SiteDocuments<" + type + ">", e);
-			return;
+			log.warn("Couldn't update SiteDocuments<{}>", type, e);
+			return 0;
 		}
 
 		List<RSSItem> feedMetas = rss.getItems();
@@ -183,7 +185,7 @@ public class WebsitePoller {
 		AwareCache<String, SiteDocument> cache = getCache(type);
 		Firestore db = FirestoreClient.getFirestore();
 
-		log.info("Checking feed's SiteDocument(s)<" + type + "> against cache");
+		log.info("Checking feed's SiteDocument(s)<{}> against cache", type);
 
 		// Get ids which are not in cache
 		List<String> newIds = feedIds.stream()
@@ -192,7 +194,7 @@ public class WebsitePoller {
 
 		if(newIds.isEmpty()) {
 			log.info("No new SiteDocuments<{}>", type);
-			return;
+			return 0;
 		}
 
 		Map<String, SiteDocument> dbNewDocs;
@@ -212,7 +214,7 @@ public class WebsitePoller {
 
 		} catch(Exception e) {
 			log.warn("Couldn't get SiteDocuments<{}> from db", type, e);
-			return;
+			return 0;
 		}
 
 		Set<SiteDocument> newSiteDocs = new HashSet<>();
@@ -234,12 +236,12 @@ public class WebsitePoller {
 					newSiteDocs.add(d);
 
 				} catch(Exception e) {
-					log.warn("Couldn't scrape SiteDocument<" + type + "> from site", e);
+					log.warn("Couldn't scrape SiteDocument<{}> from site", type, e);
 				}
 
 		if(newSiteDocs.isEmpty()) {
-			log.info("No new SiteDocuments<" + type + ">");
-			return;
+			log.info("No new SiteDocuments<{}>", type);
+			return 0;
 		}
 
 		// Remove previously added documents from cache (other than latest 10)
@@ -260,26 +262,29 @@ public class WebsitePoller {
 
 		// TODO: handle failure
 
-		log.info("Saved (hopefully) " + newSiteDocs.size() + " new SiteDocument(s)<" + type + ">");
+		int updated = newSiteDocs.size();
 
+		log.info("Saved (hopefully) {} new SiteDocument(s)<{}>", updated, type);
+
+		return updated;
 	}
 
 	@Scheduled(cron = CRON_EXP_CIRCOLARI, zone = "Europe/Rome")
-	public void updateCircolari() {
+	public int updateCircolari() {
 
-		updateSiteDocuments(CIRCOLARE, webref.getFeedCircolari(), webref.getSchoolYearCircolari());
+		return updateSiteDocuments(CIRCOLARE, webref.getFeedCircolari(), webref.getSchoolYearCircolari());
 
 	}
 
 	@Scheduled(cron = CRON_EXP_AVVISI, zone = "Europe/Rome")
-	public void updateAvvisi() {
+	public int updateAvvisi() {
 
-		updateSiteDocuments(AVVISO, webref.getFeedAvvisi(), webref.getSchoolYearAvvisi());
+		return updateSiteDocuments(AVVISO, webref.getFeedAvvisi(), webref.getSchoolYearAvvisi());
 
 	}
 
 	@Scheduled(cron = CRON_EXP_ARCHIVE, zone = "Europe/Rome")
-	public void updateArchive() {
+	public int updateArchive() {
 
 		String archiveUrl = webref.getArchiveUrl();
 		List<ArchiveEntry> webEntries;
@@ -290,7 +295,7 @@ public class WebsitePoller {
 
 		} catch(IOException e) {
 			log.warn("Couldn't update archive", e);
-			return;
+			return 0;
 		}
 
 		Firestore db = FirestoreClient.getFirestore();
@@ -308,7 +313,7 @@ public class WebsitePoller {
 
 		} catch(Exception e) {
 			log.warn("Couldn't get ArchiveEntries from db", e);
-			return;
+			return 0;
 		}
 
 		// Find new entries
@@ -321,7 +326,7 @@ public class WebsitePoller {
 
 		if(newEntriesQueries.isEmpty()) {
 			log.info("No need to update archive, no new entries");
-			return;
+			return 0;
 		}
 
 		try {
@@ -332,11 +337,11 @@ public class WebsitePoller {
 
 		} catch(Exception e) {
 			log.warn("Couldn't update archive", e);
-			return;
+			return 0;
 		}
 
 		int newEntries = newEntriesQueries.size();
-		log.info("Added " + newEntries + " new entry(s) in archive");
+		log.info("Added {} new entry(s) in archive", newEntries);
 
 		for(ArchiveEntry webEntry : webEntries)
 			if(!dbEntries.containsKey(webEntry.getId()))
@@ -386,6 +391,7 @@ public class WebsitePoller {
 		if(updated.get())
 			fbAdmin.uploadWebRef();
 
+		return newEntries;
 	}
 
 }

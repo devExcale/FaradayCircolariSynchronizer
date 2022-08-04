@@ -31,9 +31,8 @@ public class UpdateController {
 	@EventListener(ApplicationReadyEvent.class)
 	public void onApplicationReady() {
 
-		Firestore db = FirestoreClient.getFirestore();
-
-		archiveCache.open(db.collection(ARCHIVE));
+		archiveCache.open(FirestoreClient.getFirestore()
+				.collection(ARCHIVE));
 
 	}
 
