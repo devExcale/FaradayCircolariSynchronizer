@@ -1,29 +1,32 @@
 package org.experimentalplayers.faraday.controllers;
 
-import com.google.cloud.firestore.Firestore;
 import com.google.firebase.cloud.FirestoreClient;
 import org.experimentalplayers.faraday.beans.WebRef;
 import org.experimentalplayers.faraday.models.ArchiveEntry;
-import org.experimentalplayers.faraday.scraper.WebsiteScraper;
+import org.experimentalplayers.faraday.models.rest.UpdateResponse;
+import org.experimentalplayers.faraday.scraper.WebsitePoller;
 import org.experimentalplayers.faraday.utils.AwareCache;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import static org.experimentalplayers.faraday.utils.Mappings.ARCHIVE;
+import static org.experimentalplayers.faraday.models.DocumentType.AVVISO;
+import static org.experimentalplayers.faraday.models.DocumentType.CIRCOLARE;
+import static org.experimentalplayers.faraday.utils.CollectionMappings.ARCHIVE;
+import static org.experimentalplayers.faraday.utils.RestMappings.*;
 
-@RestController("/update")
+@RestController(CONTEXT_POLL)
 public class UpdateController {
 
-	private final WebsiteScraper scraper;
+	private final WebsitePoller poller;
 
 	private final WebRef webref;
 
 	private final AwareCache<String, ArchiveEntry> archiveCache;
 
-	public UpdateController(WebsiteScraper scraper, WebRef webref) {
-		this.scraper = scraper;
+	public UpdateController(WebsitePoller poller, WebRef webref) {
+		this.poller = poller;
 		this.webref = webref;
 		archiveCache = new AwareCache<>(ArchiveEntry.class, ArchiveEntry::getId);
 	}
@@ -36,19 +39,43 @@ public class UpdateController {
 
 	}
 
-	@GetMapping("/archive")
-	public void updateArchive() {
+	@GetMapping(POLL_ARCHIVE)
+	public UpdateResponse updateArchive() {
 
+		long start = System.currentTimeMillis();
+		int updated = poller.updateArchive();
+
+		return UpdateResponse.builder()
+				.collection(ARCHIVE.toUpperCase())
+				.updated(updated)
+				.opTime(System.currentTimeMillis() - start)
+				.build();
 	}
 
-	@GetMapping("/circolari")
-	public void updateCircolari() {
+	@GetMapping(POLL_CIRCOLARI)
+	public UpdateResponse updateCircolari() {
 
+		long start = System.currentTimeMillis();
+		int updated = poller.updateCircolari();
+
+		return UpdateResponse.builder()
+				.collection(CIRCOLARE.toString())
+				.updated(updated)
+				.opTime(System.currentTimeMillis() - start)
+				.build();
 	}
 
-	@GetMapping("/avvisi")
-	public void updateAvvisi() {
+	@GetMapping(POLL_AVVISI)
+	public UpdateResponse updateAvvisi() {
 
+		long start = System.currentTimeMillis();
+		int updated = poller.updateAvvisi();
+
+		return UpdateResponse.builder()
+				.collection(AVVISO.toString())
+				.updated(updated)
+				.opTime(System.currentTimeMillis() - start)
+				.build();
 	}
 
 	public void updateSiteDocuments() {

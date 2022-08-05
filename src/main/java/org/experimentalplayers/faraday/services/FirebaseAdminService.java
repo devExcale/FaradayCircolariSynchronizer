@@ -18,7 +18,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import static org.experimentalplayers.faraday.utils.Mappings.WEB_REF;
+import static org.experimentalplayers.faraday.utils.CollectionMappings.WEB_REF;
 
 @Log4j2
 @Service

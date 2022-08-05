@@ -1,6 +1,6 @@
 package org.experimentalplayers.faraday.utils;
 
-public class Mappings {
+public class CollectionMappings {
 
 	public static final String ARCHIVE = "archive";
 

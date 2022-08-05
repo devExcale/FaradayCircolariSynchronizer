@@ -32,8 +32,8 @@ import java.util.stream.Collectors;
 import static com.google.cloud.firestore.FieldPath.documentId;
 import static com.google.cloud.firestore.Query.Direction.DESCENDING;
 import static org.experimentalplayers.faraday.models.DocumentType.*;
-import static org.experimentalplayers.faraday.utils.Mappings.ARCHIVE;
-import static org.experimentalplayers.faraday.utils.Mappings.DOCUMENTS;
+import static org.experimentalplayers.faraday.utils.CollectionMappings.ARCHIVE;
+import static org.experimentalplayers.faraday.utils.CollectionMappings.DOCUMENTS;
 
 @SuppressWarnings("ScheduledMethodInspection")
 
