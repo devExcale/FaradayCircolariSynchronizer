@@ -15,13 +15,13 @@ import org.experimentalplayers.faraday.models.DocumentType;
 import org.experimentalplayers.faraday.models.SiteDocument;
 import org.experimentalplayers.faraday.models.rss.RSSItem;
 import org.experimentalplayers.faraday.models.rss.RSSMain;
+import org.experimentalplayers.faraday.services.CacheService;
 import org.experimentalplayers.faraday.services.FirebaseAdminService;
 import org.experimentalplayers.faraday.utils.AwareCache;
 import org.intellij.lang.annotations.Language;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -30,8 +30,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.google.cloud.firestore.FieldPath.documentId;
-import static com.google.cloud.firestore.Query.Direction.DESCENDING;
-import static org.experimentalplayers.faraday.models.DocumentType.*;
+import static org.experimentalplayers.faraday.models.DocumentType.AVVISO;
+import static org.experimentalplayers.faraday.models.DocumentType.CIRCOLARE;
 import static org.experimentalplayers.faraday.utils.CollectionMappings.ARCHIVE;
 import static org.experimentalplayers.faraday.utils.CollectionMappings.DOCUMENTS;
 
@@ -54,109 +54,32 @@ public class WebsitePoller {
 
 	// === START COMPONENTS ===
 
-	private final FirebaseAdminService fbAdmin;
+	private final CacheService cacheService;
 
 	private final WebsiteScraper scraper;
+
+	private final FirebaseAdminService fbAdmin;
+
+	private final Firestore db;
 
 	private final WebRef webref;
 
 	// === END COMPONENTS ===
 
-	private final AwareCache<String, SiteDocument> circolariCache;
-	private final AwareCache<String, SiteDocument> avvisiCache;
-
-	public WebsitePoller(FirebaseAdminService fbAdmin, WebsiteScraper scraper, WebRef webref) {
-		this.fbAdmin = fbAdmin;
+	public WebsitePoller(CacheService cacheService, WebsiteScraper scraper, FirebaseAdminService fbAdmin, Firestore db,
+			WebRef webref) {
+		this.cacheService = cacheService;
 		this.scraper = scraper;
+		this.fbAdmin = fbAdmin;
+		this.db = db;
 		this.webref = webref;
-		circolariCache = new AwareCache<>(SiteDocument.class, SiteDocument::getId);
-		avvisiCache = new AwareCache<>(SiteDocument.class, SiteDocument::getId);
 	}
-
-	@PostConstruct
-	public void initCaches() {
-
-		CollectionReference collection = FirestoreClient.getFirestore()
-				.collection(DOCUMENTS);
-
-		circolariCache.open(collection.whereEqualTo("type", CIRCOLARE)
-				.orderBy("publishDate", DESCENDING)
-				.limit(10));
-
-		avvisiCache.open(collection.whereEqualTo("type", AVVISO)
-				.orderBy("publishDate", DESCENDING)
-				.limit(10));
-
-	}
-
-	public AwareCache<String, SiteDocument> getCache(DocumentType type) {
-
-		switch(type) {
-
-			case CIRCOLARE:
-				return circolariCache;
-
-			case AVVISO:
-				return avvisiCache;
-
-			default:
-
-				String msg = "Unknown DocumentType, providing no cache";
-				log.warn(msg, new RuntimeException(msg));
-
-				return null;
-		}
-
-	}
-
-	//	/**
-	//	 * Refreshes type's cache with the latest 10 documents,
-	//	 * plus any additional document specified (if it exists)
-	//	 *
-	//	 * @param type
-	//	 * @param additionalIds
-	//	 */
-	//	public void refreshCache(DocumentType type, List<String> additionalIds) {
-	//
-	//		log.info("Refreshing cache");
-	//
-	//		Firestore db = FirestoreClient.getFirestore();
-	//		CollectionReference collection = db.collection(DOCUMENTS);
-	//
-	//		ApiFuture<QuerySnapshot> queryLatest = collection.whereEqualTo("type", type)
-	//				.orderBy("publishDate", DESCENDING)
-	//				.limit(10)
-	//				.get();
-	//
-	//		ApiFuture<QuerySnapshot> queryIds = collection.whereEqualTo("type", type)
-	//				.whereIn(FieldPath.documentId(), additionalIds)
-	//				.get();
-	//
-	//		final Set<String> cache = getCache(type);
-	//
-	//		if(type == CIRCOLARE || type == AVVISO)
-	//			try {
-	//
-	//				ApiFutures.allAsList(Arrays.asList(queryLatest, queryIds))
-	//						.get()
-	//						.stream()
-	//						.map(snap -> snap.toObjects(SiteDocument.class))
-	//						.flatMap(Collection::stream)
-	//						.map(SiteDocument::getId)
-	//						.forEach(cache::add);
-	//
-	//			} catch(Exception e) {
-	//				log.warn("Failed to refresh cache<" + type + ">", e);
-	//				// TODO: exception handling
-	//			}
-	//
-	//	}
 
 	// TODO: move segments in methods
 	public int updateSiteDocuments(DocumentType type, String feedUrl, String schoolYear) {
 
-		if(type == UNKNOWN)
-			throw new IllegalArgumentException("Unknown SiteDocument type");
+		if(type != CIRCOLARE && type != AVVISO)
+			throw new IllegalArgumentException("Illegal SiteDocument type");
 
 		RSSMain rss;
 
@@ -181,9 +104,9 @@ public class WebsitePoller {
 				.map(SiteDocument::idFromUrl)
 				.collect(Collectors.toList());
 
-		// Cache shouldn't be null, unless a new type other than CIRCOLARE and AVVISO is added
-		AwareCache<String, SiteDocument> cache = getCache(type);
-		Firestore db = FirestoreClient.getFirestore();
+		// There should be no problem in casting, CIRCOLARE and AVVISO types are always SiteDocument
+		//noinspection unchecked
+		AwareCache<SiteDocument> cache = (AwareCache<SiteDocument>) cacheService.getCache(type);
 
 		log.info("Checking feed's SiteDocument(s)<{}> against cache", type);
 

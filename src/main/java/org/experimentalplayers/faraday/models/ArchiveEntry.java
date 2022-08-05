@@ -1,6 +1,8 @@
 package org.experimentalplayers.faraday.models;
 
+import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.annotation.DocumentId;
+import com.google.cloud.firestore.annotation.ServerTimestamp;
 import lombok.*;
 
 @ToString
@@ -9,7 +11,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ArchiveEntry {
+public class ArchiveEntry implements FireDocument {
 
 	@DocumentId
 	private String id;
@@ -23,5 +25,8 @@ public class ArchiveEntry {
 	private Integer startYear;
 
 	private Integer endYear;
+
+	@ServerTimestamp
+	private Timestamp lastUpdated;
 
 }

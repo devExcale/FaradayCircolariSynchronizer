@@ -4,6 +4,7 @@ import com.google.cloud.firestore.DocumentChange;
 import com.google.cloud.firestore.ListenerRegistration;
 import com.google.cloud.firestore.Query;
 import lombok.extern.log4j.Log4j2;
+import org.experimentalplayers.faraday.models.FireDocument;
 
 import java.io.Closeable;
 import java.util.*;
@@ -11,18 +12,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 @Log4j2
-public class AwareCache<K, T> implements Closeable {
+public class AwareCache<Doc extends FireDocument> implements Closeable {
 
-	private final Map<K, T> objects;
-	private final Map<K, T> additions;
-	private final Class<T> type;
-	private final Function<T, K> keyExtractor;
+	private final Map<String, Doc> objects;
+	private final Map<String, Doc> additions;
+	private final Class<Doc> type;
+	private final Function<Doc, String> keyExtractor;
 
 	private ListenerRegistration listener;
 	private Query query;
 
 	// Go generics!
-	public AwareCache(Class<T> type, Function<T, K> keyExtractor) {
+	public AwareCache(Class<Doc> type, Function<Doc, String> keyExtractor) {
 		this.type = type;
 		this.keyExtractor = keyExtractor;
 		objects = new ConcurrentHashMap<>();
@@ -36,7 +37,7 @@ public class AwareCache<K, T> implements Closeable {
 	 * @param key Key to match
 	 * @return True if key is present, false otherwise
 	 */
-	public boolean hit(K key) {
+	public boolean hit(String key) {
 		return objects.containsKey(key) || additions.containsKey(key);
 	}
 
@@ -46,11 +47,11 @@ public class AwareCache<K, T> implements Closeable {
 	 * @param key Key to match
 	 * @return True if key is not present, false otherwise
 	 */
-	public boolean miss(K key) {
+	public boolean miss(String key) {
 		return !objects.containsKey(key) && !additions.containsKey(key);
 	}
 
-	public void add(T obj) {
+	public void add(Doc obj) {
 		additions.put(keyExtractor.apply(obj), obj);
 	}
 
@@ -63,25 +64,29 @@ public class AwareCache<K, T> implements Closeable {
 		additions.clear();
 	}
 
-	public Map<K, T> getState() {
+	public Class<? extends FireDocument> getType() {
+		return type;
+	}
 
-		Map<K, T> map = new HashMap<>(objects);
+	public Map<String, Doc> getState() {
+
+		Map<String, Doc> map = new HashMap<>(objects);
 		map.putAll(additions);
 
 		return map;
 	}
 
-	public Set<K> getKeys() {
+	public Set<String> getKeys() {
 
-		Set<K> set = new HashSet<>(objects.keySet());
+		Set<String> set = new HashSet<>(objects.keySet());
 		set.addAll(additions.keySet());
 
 		return set;
 	}
 
-	public Set<T> getValues() {
+	public Set<Doc> getValues() {
 
-		Set<T> set = new HashSet<>(objects.values());
+		Set<Doc> set = new HashSet<>(objects.values());
 		set.addAll(additions.values());
 
 		return set;
@@ -103,7 +108,7 @@ public class AwareCache<K, T> implements Closeable {
 			//noinspection ConstantConditions
 			for(DocumentChange change : snapshots.getDocumentChanges()) {
 
-				T obj = change.getDocument()
+				Doc obj = change.getDocument()
 						.toObject(type);
 
 				switch(change.getType()) {
@@ -136,7 +141,7 @@ public class AwareCache<K, T> implements Closeable {
 		if(query == null)
 			return;
 
-		List<T> fetched;
+		List<Doc> fetched;
 
 		try {
 
@@ -152,7 +157,7 @@ public class AwareCache<K, T> implements Closeable {
 			additions.clear();
 		objects.clear();
 
-		for(T obj : fetched)
+		for(Doc obj : fetched)
 			objects.put(keyExtractor.apply(obj), obj);
 
 	}

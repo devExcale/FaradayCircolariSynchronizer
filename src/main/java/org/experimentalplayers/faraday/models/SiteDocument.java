@@ -2,6 +2,8 @@ package org.experimentalplayers.faraday.models;
 
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.annotation.DocumentId;
+import com.google.cloud.firestore.annotation.Exclude;
+import com.google.cloud.firestore.annotation.ServerTimestamp;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,7 +28,7 @@ import static org.experimentalplayers.faraday.utils.Statics.bytesToHex;
 @Data
 @Builder
 @AllArgsConstructor
-public class SiteDocument {
+public class SiteDocument implements FireDocument {
 
 	private static final Pattern ARTICLE_ID_REGEX = Pattern.compile("^\\d+");
 
@@ -99,8 +101,15 @@ public class SiteDocument {
 
 	private String schoolYear;
 
+	@ServerTimestamp
+	private Timestamp lastUpdated;
+
+	@Exclude
+	private boolean isUpdated;
+
 	public SiteDocument() {
 		attachments = new LinkedList<>();
+		isUpdated = false;
 	}
 
 	public String getId() {

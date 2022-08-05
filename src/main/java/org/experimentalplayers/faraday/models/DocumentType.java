@@ -6,6 +6,7 @@ public enum DocumentType {
 
 	CIRCOLARE,
 	AVVISO,
+	ARCHIVE,
 	UNKNOWN;
 
 	@NotNull
