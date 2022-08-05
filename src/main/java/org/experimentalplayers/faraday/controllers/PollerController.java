@@ -1,6 +1,7 @@
 package org.experimentalplayers.faraday.controllers;
 
 import com.google.firebase.cloud.FirestoreClient;
+import lombok.extern.log4j.Log4j2;
 import org.experimentalplayers.faraday.beans.WebRef;
 import org.experimentalplayers.faraday.models.ArchiveEntry;
 import org.experimentalplayers.faraday.models.rest.UpdateResponse;
@@ -16,8 +17,9 @@ import static org.experimentalplayers.faraday.models.DocumentType.CIRCOLARE;
 import static org.experimentalplayers.faraday.utils.CollectionMappings.ARCHIVE;
 import static org.experimentalplayers.faraday.utils.RestMappings.*;
 
+@Log4j2
 @RestController(CONTEXT_POLL)
-public class UpdateController {
+public class PollerController {
 
 	private final WebsitePoller poller;
 
@@ -25,7 +27,7 @@ public class UpdateController {
 
 	private final AwareCache<String, ArchiveEntry> archiveCache;
 
-	public UpdateController(WebsitePoller poller, WebRef webref) {
+	public PollerController(WebsitePoller poller, WebRef webref) {
 		this.poller = poller;
 		this.webref = webref;
 		archiveCache = new AwareCache<>(ArchiveEntry.class, ArchiveEntry::getId);
@@ -76,10 +78,6 @@ public class UpdateController {
 				.updated(updated)
 				.opTime(System.currentTimeMillis() - start)
 				.build();
-	}
-
-	public void updateSiteDocuments() {
-
 	}
 
 }

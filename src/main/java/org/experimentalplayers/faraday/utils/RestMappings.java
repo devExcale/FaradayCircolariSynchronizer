@@ -2,7 +2,9 @@ package org.experimentalplayers.faraday.utils;
 
 public class RestMappings {
 
-	public static final String CONTEXT_POLL = "/api/poll";
+	public static final String API_ROOT = "/api";
+
+	public static final String CONTEXT_POLL = API_ROOT + "/poll";
 
 	public static final String POLL_ARCHIVE = "/archive";
 
