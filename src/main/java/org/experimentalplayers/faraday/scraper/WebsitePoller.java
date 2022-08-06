@@ -153,7 +153,7 @@ public class WebsitePoller {
 							.type(type)
 							.category(docMeta.getCategory())
 							.schoolYear(schoolYear)
-							.publishDate(Timestamp.of(DATE_FORMAT.parse(docMeta.getPubDate())))
+							.originalPublishDate(Timestamp.of(DATE_FORMAT.parse(docMeta.getPubDate())))
 							.build();
 
 					newSiteDocs.add(d);

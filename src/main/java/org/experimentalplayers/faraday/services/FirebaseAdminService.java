@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -38,12 +39,10 @@ public class FirebaseAdminService {
 	}
 
 	@PostConstruct
-	public void init() {
+	public void init() throws IOException, IllegalArgumentException {
 
-		if(firebaseKeyPath.isEmpty()) {
-			log.error("Empty FIREBASE_KEY_PATH");
-			return;
-		}
+		if(firebaseKeyPath.isEmpty())
+			throw new IllegalArgumentException("Null or empty FIREBASE_KEY_PATH variable");
 
 		try(InputStream is = Files.newInputStream(Paths.get(firebaseKeyPath))) {
 
@@ -64,8 +63,14 @@ public class FirebaseAdminService {
 
 		} catch(Exception e) {
 			log.error("Could not authenticate Firebase", e);
+			throw e;
 		}
 
+	}
+
+	@Bean
+	public Firestore getDB() {
+		return db;
 	}
 
 	@Bean

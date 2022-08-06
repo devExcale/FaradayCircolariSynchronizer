@@ -95,14 +95,14 @@ public class WebsiteScraper {
 		SiteDocumentBuilder builder = SiteDocument.builder()
 				.pageUrl(docUrl);
 
-		documentSetTitleAndPublishDate(builder, page);
+		documentSetTitleAndInferPublishDate(builder, page);
 		documentSetAttachments(builder, page);
 		documentSetSnippet(builder, page);
 
 		return builder;
 	}
 
-	public void documentSetTitleAndPublishDate(@NotNull SiteDocumentBuilder builder, @NotNull Document page) {
+	public void documentSetTitleAndInferPublishDate(@NotNull SiteDocumentBuilder builder, @NotNull Document page) {
 
 		Element header = page.selectFirst(HEADER);
 
@@ -119,7 +119,7 @@ public class WebsiteScraper {
 
 		Statics.findDate(title)
 				.map(Timestamp::of)
-				.ifPresent(builder::publishDate);
+				.ifPresent(builder::inferredPublishDate);
 
 	}
 

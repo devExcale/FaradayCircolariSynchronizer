@@ -11,14 +11,16 @@ import lombok.EqualsAndHashCode;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.max;
@@ -93,7 +95,9 @@ public class SiteDocument implements FireDocument {
 	@EqualsAndHashCode.Exclude
 	private List<Attachment> attachments;
 
-	private Timestamp publishDate;
+	private Timestamp originalPublishDate;
+
+	private Timestamp inferredPublishDate;
 
 	private DocumentType type;
 
@@ -104,12 +108,8 @@ public class SiteDocument implements FireDocument {
 	@ServerTimestamp
 	private Timestamp lastUpdated;
 
-	@Exclude
-	private boolean isUpdated;
-
 	public SiteDocument() {
 		attachments = new LinkedList<>();
-		isUpdated = false;
 	}
 
 	public String getId() {
@@ -138,6 +138,27 @@ public class SiteDocument implements FireDocument {
 		articleId = articleIdFromUrl(pageUrl);
 
 		return articleId;
+	}
+
+	public List<String> nonNullFieldsNames(String... and) {
+
+		Set<String> others = new HashSet<>(Arrays.asList(and));
+
+		return Arrays.stream(getClass().getDeclaredFields())
+				.filter(field -> !field.isAnnotationPresent(Exclude.class))
+				.peek(field -> field.setAccessible(true))
+				.filter(field -> !Modifier.isStatic(field.getModifiers()))
+				.filter(field -> {
+					try {
+
+						return Objects.nonNull(field.get(SiteDocument.this)) || others.contains(field.getName());
+
+					} catch(IllegalAccessException e) {
+						return false;
+					}
+				})
+				.map(Field::getName)
+				.collect(Collectors.toList());
 	}
 
 }
