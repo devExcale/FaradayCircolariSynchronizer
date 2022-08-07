@@ -5,6 +5,7 @@ import com.google.cloud.firestore.ListenerRegistration;
 import com.google.cloud.firestore.Query;
 import lombok.extern.log4j.Log4j2;
 import org.experimentalplayers.faraday.models.FireDocument;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.Closeable;
 import java.util.*;
@@ -51,8 +52,13 @@ public class AwareCache<Doc extends FireDocument> implements Closeable {
 		return !objects.containsKey(key) && !additions.containsKey(key);
 	}
 
-	public void add(Doc obj) {
-		additions.put(keyExtractor.apply(obj), obj);
+	public void add(@NotNull Doc doc) {
+		additions.put(keyExtractor.apply(doc), doc);
+	}
+
+	public void addAll(@NotNull Collection<Doc> docs) {
+		for(Doc doc : docs)
+			additions.put(keyExtractor.apply(doc), doc);
 	}
 
 	public void clear() {

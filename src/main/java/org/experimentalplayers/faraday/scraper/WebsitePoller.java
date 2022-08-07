@@ -5,7 +5,6 @@ import com.google.api.core.ApiFutures;
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.CollectionReference;
 import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.WriteBatch;
 import com.google.cloud.firestore.WriteResult;
 import com.google.firebase.cloud.FirestoreClient;
 import lombok.extern.log4j.Log4j2;
@@ -16,7 +15,7 @@ import org.experimentalplayers.faraday.models.SiteDocument;
 import org.experimentalplayers.faraday.models.rss.RSSItem;
 import org.experimentalplayers.faraday.models.rss.RSSMain;
 import org.experimentalplayers.faraday.services.CacheService;
-import org.experimentalplayers.faraday.services.FirebaseAdminService;
+import org.experimentalplayers.faraday.services.FirestoreHelper;
 import org.experimentalplayers.faraday.utils.AwareCache;
 import org.intellij.lang.annotations.Language;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,11 +28,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.google.cloud.firestore.FieldPath.documentId;
 import static org.experimentalplayers.faraday.models.DocumentType.AVVISO;
 import static org.experimentalplayers.faraday.models.DocumentType.CIRCOLARE;
 import static org.experimentalplayers.faraday.utils.CollectionMappings.ARCHIVE;
-import static org.experimentalplayers.faraday.utils.CollectionMappings.DOCUMENTS;
 
 @SuppressWarnings("ScheduledMethodInspection")
 
@@ -58,20 +55,16 @@ public class WebsitePoller {
 
 	private final WebsiteScraper scraper;
 
-	private final FirebaseAdminService fbAdmin;
-
-	private final Firestore db;
+	private final FirestoreHelper dbHelper;
 
 	private final WebRef webref;
 
 	// === END COMPONENTS ===
 
-	public WebsitePoller(CacheService cacheService, WebsiteScraper scraper, FirebaseAdminService fbAdmin, Firestore db,
-			WebRef webref) {
+	public WebsitePoller(CacheService cacheService, WebsiteScraper scraper, FirestoreHelper dbHelper, WebRef webref) {
 		this.cacheService = cacheService;
 		this.scraper = scraper;
-		this.fbAdmin = fbAdmin;
-		this.db = db;
+		this.dbHelper = dbHelper;
 		this.webref = webref;
 	}
 
@@ -127,11 +120,7 @@ public class WebsitePoller {
 		// Get doc urls from db that match the feed ones
 		try {
 
-			dbNewDocs = db.collection(DOCUMENTS)
-					.whereIn(documentId(), newIds)
-					.get()
-					.get()
-					.toObjects(SiteDocument.class)
+			dbNewDocs = dbHelper.getSiteDocumentsWithIds(newIds)
 					.stream()
 					.collect(Collectors.toMap(SiteDocument::getId, Function.identity()));
 
@@ -170,20 +159,10 @@ public class WebsitePoller {
 		// Remove previously added documents from cache (other than latest 10)
 		cache.clearAdded();
 
-		// Open new batch to save new SiteDocuments
-		WriteBatch batch = db.batch();
-		CollectionReference documentsCollection = db.collection(DOCUMENTS);
-
-		// Save all new SiteDocuments (db and cache)
-		for(SiteDocument doc : newSiteDocs) {
-			batch.set(documentsCollection.document(doc.getId()), doc);
-			cache.add(doc);
-		}
-
-		// Commit batch and pray
-		batch.commit();
-
-		// TODO: handle failure
+		// Write new SiteDocuments on db
+		dbHelper.writeSiteDocuments(newSiteDocs);
+		// And on cache
+		cache.addAll(newSiteDocs);
 
 		int updated = newSiteDocs.size();
 
@@ -312,7 +291,7 @@ public class WebsitePoller {
 
 
 		if(updated.get())
-			fbAdmin.uploadWebRef();
+			dbHelper.mergeWebRef();
 
 		return newEntries;
 	}

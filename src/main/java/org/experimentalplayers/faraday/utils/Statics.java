@@ -1,11 +1,16 @@
 package org.experimentalplayers.faraday.utils;
 
+import com.google.cloud.firestore.annotation.Exclude;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class Statics {
 
@@ -74,6 +79,29 @@ public class Statics {
 		}
 
 		return opt;
+	}
+
+	public static List<String> nonNullFields(Object obj, String... otherFields) {
+
+		Set<String> others = new HashSet<>(Arrays.asList(otherFields));
+		Field[] fields = obj.getClass()
+				.getDeclaredFields();
+
+		return Arrays.stream(fields)
+				.filter(field -> !field.isAnnotationPresent(Exclude.class))
+				.peek(field -> field.setAccessible(true))
+				.filter(field -> !Modifier.isStatic(field.getModifiers()))
+				.filter(field -> {
+					try {
+
+						return Objects.nonNull(field.get(obj)) || others.contains(field.getName());
+
+					} catch(IllegalAccessException e) {
+						return false;
+					}
+				})
+				.map(Field::getName)
+				.collect(Collectors.toList());
 	}
 
 }
