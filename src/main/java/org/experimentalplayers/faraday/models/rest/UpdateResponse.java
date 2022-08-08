@@ -1,6 +1,9 @@
 package org.experimentalplayers.faraday.models.rest;
 
 import lombok.*;
+import org.experimentalplayers.faraday.models.FireDocument;
+
+import java.util.Collection;
 
 @Getter
 @Setter
@@ -11,8 +14,10 @@ public class UpdateResponse {
 
 	private String collection;
 
-	private Integer updated;
-
 	private Long opTime;
+
+	private Integer documentsUpdated;
+
+	private Collection<FireDocument> documents;
 
 }

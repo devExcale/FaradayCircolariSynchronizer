@@ -24,6 +24,7 @@ public class PollerController {
 
 	private final WebRef webref;
 
+	// TODO:
 	private final AwareCache<ArchiveEntry> archiveCache;
 
 	public PollerController(WebsitePoller poller, WebRef webref, CacheService cacheService) {
@@ -38,11 +39,11 @@ public class PollerController {
 	public UpdateResponse updateArchive() {
 
 		long start = System.currentTimeMillis();
-		int updated = poller.updateArchive();
+		int updated = poller.updateArchive(); // TODO: return updated documents
 
 		return UpdateResponse.builder()
 				.collection(ARCHIVE.toUpperCase())
-				.updated(updated)
+				.documentsUpdated(updated)
 				.opTime(System.currentTimeMillis() - start)
 				.build();
 	}
@@ -55,7 +56,7 @@ public class PollerController {
 
 		return UpdateResponse.builder()
 				.collection(CIRCOLARE.toString())
-				.updated(updated)
+				.documentsUpdated(updated)
 				.opTime(System.currentTimeMillis() - start)
 				.build();
 	}
@@ -68,7 +69,7 @@ public class PollerController {
 
 		return UpdateResponse.builder()
 				.collection(AVVISO.toString())
-				.updated(updated)
+				.documentsUpdated(updated)
 				.opTime(System.currentTimeMillis() - start)
 				.build();
 	}
