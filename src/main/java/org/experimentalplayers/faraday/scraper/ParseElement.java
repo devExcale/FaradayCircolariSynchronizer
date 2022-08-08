@@ -15,8 +15,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static org.experimentalplayers.faraday.models.DocumentType.UNKNOWN;
-
 @Log4j2
 public class ParseElement {
 
@@ -161,7 +159,6 @@ public class ParseElement {
 		int endYear = Integer.parseInt(years.group(2));
 
 		return ArchiveEntry.builder()
-				.id(String.format("%s %d-%d", type, startYear, endYear))
 				.type(type)
 				.url(url)
 				.schoolYear(schoolYear)

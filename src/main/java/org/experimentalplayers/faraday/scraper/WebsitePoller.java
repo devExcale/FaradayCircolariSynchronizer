@@ -1,12 +1,6 @@
 package org.experimentalplayers.faraday.scraper;
 
-import com.google.api.core.ApiFuture;
-import com.google.api.core.ApiFutures;
 import com.google.cloud.Timestamp;
-import com.google.cloud.firestore.CollectionReference;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.WriteResult;
-import com.google.firebase.cloud.FirestoreClient;
 import lombok.extern.log4j.Log4j2;
 import org.experimentalplayers.faraday.beans.WebRef;
 import org.experimentalplayers.faraday.models.ArchiveEntry;
@@ -30,7 +24,6 @@ import java.util.stream.Collectors;
 
 import static org.experimentalplayers.faraday.models.DocumentType.AVVISI;
 import static org.experimentalplayers.faraday.models.DocumentType.CIRCOLARI;
-import static org.experimentalplayers.faraday.utils.CollectionMappings.ARCHIVE;
 
 @SuppressWarnings("ScheduledMethodInspection")
 
@@ -188,11 +181,14 @@ public class WebsitePoller {
 	@Scheduled(cron = CRON_EXP_ARCHIVE, zone = "Europe/Rome")
 	public int updateArchive() {
 
+		//noinspection unchecked
+		AwareCache<ArchiveEntry> cache = (AwareCache<ArchiveEntry>) cacheService.getCache(DocumentType.ARCHIVE);
 		String archiveUrl = webref.getArchiveUrl();
 		List<ArchiveEntry> webEntries;
 
 		try {
 
+			// Get archives from site
 			webEntries = scraper.archive(archiveUrl);
 
 		} catch(IOException e) {
@@ -200,54 +196,50 @@ public class WebsitePoller {
 			return 0;
 		}
 
-		Firestore db = FirestoreClient.getFirestore();
-		CollectionReference archive = db.collection(ARCHIVE);
+		// Check cache for new entries
+		Map<String, ArchiveEntry> newEntries = webEntries.stream()
+				.filter(entry -> cache.miss(entry.getId()))
+				.collect(Collectors.toMap(ArchiveEntry::getId, Function.identity()));
 
-		Map<String, ArchiveEntry> dbEntries;
+		if(newEntries.isEmpty()) {
+			log.info("No new ArchiveEntries");
+			return 0;
+		}
+
+		Set<String> dbKeys;
 
 		try {
 
-			dbEntries = archive.get()
-					.get()
-					.toObjects(ArchiveEntry.class)
+			// Get "new" entries that are on db (but not on cache)
+			dbKeys = dbHelper.getArchivesWithIds(new ArrayList<>(newEntries.keySet()))
 					.stream()
-					.collect(Collectors.toMap(ArchiveEntry::getId, Function.identity()));
-
-		} catch(Exception e) {
-			log.warn("Couldn't get ArchiveEntries from db", e);
-			return 0;
-		}
-
-		// Find new entries
-		List<ApiFuture<WriteResult>> newEntriesQueries = webEntries.stream()
-				.filter(entry -> !dbEntries.containsKey(entry.getId()))
-				// Write new entries to archive
-				.map(entry -> archive.document(entry.getId())
-						.set(entry))
-				.collect(Collectors.toList());
-
-		if(newEntriesQueries.isEmpty()) {
-			log.info("No need to update archive, no new entries");
-			return 0;
-		}
-
-		try {
-
-			// Execute all writes
-			ApiFutures.allAsList(newEntriesQueries)
-					.get();
+					.map(ArchiveEntry::getId)
+					.collect(Collectors.toSet());
 
 		} catch(Exception e) {
 			log.warn("Couldn't update archive", e);
 			return 0;
 		}
 
-		int newEntries = newEntriesQueries.size();
-		log.info("Added {} new entry(s) in archive", newEntries);
+		// Remove all new entries that are already on db
+		for(String key : dbKeys)
+			newEntries.remove(key);
 
-		for(ArchiveEntry webEntry : webEntries)
-			if(!dbEntries.containsKey(webEntry.getId()))
-				dbEntries.put(webEntry.getId(), webEntry);
+		if(newEntries.isEmpty()) {
+
+			log.info("No new Archives");
+			return 0;
+
+		} else {
+
+			// Save on db and update cache
+			dbHelper.writeArchives(newEntries.values());
+			cache.clearAdded();
+			cache.addAll(newEntries.values());
+
+			log.info("Saved {} new ArchiveEntries", newEntries.size());
+
+		}
 
 		// Whether to upload WebRef
 		AtomicBoolean updated = new AtomicBoolean(false);
@@ -258,7 +250,7 @@ public class WebsitePoller {
 		String schoolYearAvvisi = webref.getSchoolYearAvvisi();
 
 		// Get latest archive for circolari
-		dbEntries.values()
+		cache.getValues()
 				.stream()
 				.filter(entry -> entry.getType() == CIRCOLARI)
 				.max(Comparator.comparingInt(ArchiveEntry::getStartYear))
@@ -274,7 +266,7 @@ public class WebsitePoller {
 				});
 
 		// Get latest archive for avvisi
-		dbEntries.values()
+		cache.getValues()
 				.stream()
 				.filter(entry -> entry.getType() == AVVISI)
 				.max(Comparator.comparingInt(ArchiveEntry::getStartYear))
@@ -293,7 +285,7 @@ public class WebsitePoller {
 		if(updated.get())
 			dbHelper.mergeWebRef();
 
-		return newEntries;
+		return newEntries.size();
 	}
 
 }

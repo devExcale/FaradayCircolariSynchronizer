@@ -2,8 +2,12 @@ package org.experimentalplayers.faraday.models;
 
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.annotation.DocumentId;
+import com.google.cloud.firestore.annotation.Exclude;
 import com.google.cloud.firestore.annotation.ServerTimestamp;
 import lombok.*;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 
 @ToString
 @Getter
@@ -32,9 +36,19 @@ public class ArchiveEntry implements FireDocument {
 	public String getId() {
 
 		if(id == null || id.isEmpty())
-			id = String.format("%s %d/%d", type.pascalCase(), startYear, endYear - 2000);
+			try {
+
+				id = URLEncoder.encode(getCategory(), "UTF-8");
+
+			} catch(UnsupportedEncodingException ignored) {
+			}
 
 		return id;
+	}
+
+	@Exclude
+	public String getCategory() {
+		return String.format("%s %d/%d", type.pascalCase(), startYear, endYear - 2000);
 	}
 
 }

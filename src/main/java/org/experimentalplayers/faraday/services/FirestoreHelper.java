@@ -5,6 +5,7 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.WriteBatch;
 import lombok.extern.log4j.Log4j2;
 import org.experimentalplayers.faraday.beans.WebRef;
+import org.experimentalplayers.faraday.models.ArchiveEntry;
 import org.experimentalplayers.faraday.models.SiteDocument;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.DependsOn;
@@ -16,8 +17,8 @@ import java.util.concurrent.ExecutionException;
 
 import static com.google.cloud.firestore.FieldPath.documentId;
 import static com.google.cloud.firestore.SetOptions.mergeFields;
-import static org.experimentalplayers.faraday.utils.CollectionMappings.DOCUMENTS;
-import static org.experimentalplayers.faraday.utils.CollectionMappings.WEB_REF;
+import static java.lang.Math.min;
+import static org.experimentalplayers.faraday.utils.CollectionMappings.*;
 import static org.experimentalplayers.faraday.utils.Statics.nonNullFields;
 
 @Log4j2
@@ -27,12 +28,14 @@ public class FirestoreHelper {
 
 	private final Firestore db;
 	private final CollectionReference docsRef;
+	private final CollectionReference archiveRef;
 
 	private WebRef webref;
 
 	public FirestoreHelper(Firestore db) {
 		this.db = db;
 		docsRef = db.collection(DOCUMENTS);
+		archiveRef = db.collection(ARCHIVE);
 		webref = null;
 	}
 
@@ -126,6 +129,31 @@ public class FirestoreHelper {
 
 	}
 
+	public void writeArchive(ArchiveEntry archive) {
+
+		archive.setLastUpdated(null);
+
+		archiveRef.document(archive.getId())
+				.set(archive);
+
+	}
+
+	public void writeArchives(Collection<ArchiveEntry> archives) {
+
+		WriteBatch batch = db.batch();
+
+		for(ArchiveEntry archive : archives) {
+
+			archive.setLastUpdated(null);
+
+			batch.set(archiveRef.document(archive.getId()), archive);
+
+		}
+
+		batch.commit();
+
+	}
+
 	public List<SiteDocument> getSiteDocumentsWithIds(List<String> ids)
 			throws ExecutionException, InterruptedException {
 
@@ -135,6 +163,20 @@ public class FirestoreHelper {
 				.get()
 				.toObjects(SiteDocument.class);
 
+	}
+
+	public List<ArchiveEntry> getArchivesWithIds(List<String> ids) throws ExecutionException, InterruptedException {
+
+		List<String> queryParams = ids.subList(0, min(ids.size(), 10));
+		List<ArchiveEntry> results = archiveRef.whereIn(documentId(), queryParams)
+				.get()
+				.get()
+				.toObjects(ArchiveEntry.class);
+
+		if(ids.size() > 10)
+			results.addAll(getArchivesWithIds(ids.subList(10, ids.size())));
+
+		return results;
 	}
 
 }
