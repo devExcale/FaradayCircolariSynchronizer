@@ -9,9 +9,13 @@ import lombok.*;
 @AllArgsConstructor
 public class UpdateRequest {
 
+	// Archive info
+
 	private String documentType;
 
-	private Integer startYear;
+	private String schoolYear;
+
+	// Single document
 
 	private String url;
 

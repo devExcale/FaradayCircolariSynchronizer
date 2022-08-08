@@ -20,4 +20,6 @@ public class UpdateResponse {
 
 	private Collection<FireDocument> documents;
 
+	private String message;
+
 }
