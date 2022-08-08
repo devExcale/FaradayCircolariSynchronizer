@@ -4,8 +4,8 @@ import org.jetbrains.annotations.NotNull;
 
 public enum DocumentType {
 
-	CIRCOLARE,
-	AVVISO,
+	CIRCOLARI,
+	AVVISI,
 	ARCHIVE,
 	UNKNOWN;
 
@@ -16,12 +16,22 @@ public enum DocumentType {
 		DocumentType type = UNKNOWN;
 
 		if(word.contains("circolar"))
-			type = CIRCOLARE;
+			type = CIRCOLARI;
 
 		else if(word.contains("avvis"))
-			type = AVVISO;
+			type = AVVISI;
 
 		return type;
+	}
+
+	public @NotNull String pascalCase() {
+
+		String up = name().substring(0, 1)
+				.toUpperCase();
+		String low = name().substring(1)
+				.toLowerCase();
+
+		return up + low;
 	}
 
 }

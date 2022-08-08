@@ -54,11 +54,12 @@ public class DocumentController {
 							.message("No school year provided")
 							.build());
 
+		return null;
 	}
 
 	@PostMapping(DOCUMENTS_BATCH)
 	public UpdateResponse batchDocuments() {
-
+		return null;
 	}
 
 }

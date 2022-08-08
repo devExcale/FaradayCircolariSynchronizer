@@ -11,8 +11,8 @@ import org.experimentalplayers.faraday.utils.AwareCache;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import static org.experimentalplayers.faraday.models.DocumentType.AVVISO;
-import static org.experimentalplayers.faraday.models.DocumentType.CIRCOLARE;
+import static org.experimentalplayers.faraday.models.DocumentType.AVVISI;
+import static org.experimentalplayers.faraday.models.DocumentType.CIRCOLARI;
 import static org.experimentalplayers.faraday.utils.CollectionMappings.ARCHIVE;
 import static org.experimentalplayers.faraday.utils.RestMappings.*;
 
@@ -55,7 +55,7 @@ public class PollerController {
 		int updated = poller.updateCircolari();
 
 		return UpdateResponse.builder()
-				.collection(CIRCOLARE.toString())
+				.collection(CIRCOLARI.toString())
 				.documentsUpdated(updated)
 				.opTime(System.currentTimeMillis() - start)
 				.build();
@@ -68,7 +68,7 @@ public class PollerController {
 		int updated = poller.updateAvvisi();
 
 		return UpdateResponse.builder()
-				.collection(AVVISO.toString())
+				.collection(AVVISI.toString())
 				.documentsUpdated(updated)
 				.opTime(System.currentTimeMillis() - start)
 				.build();

@@ -1,8 +1,6 @@
 package org.experimentalplayers.faraday.services;
 
-import com.google.cloud.firestore.CollectionReference;
 import com.google.cloud.firestore.Firestore;
-import com.google.firebase.cloud.FirestoreClient;
 import org.experimentalplayers.faraday.models.ArchiveEntry;
 import org.experimentalplayers.faraday.models.DocumentType;
 import org.experimentalplayers.faraday.models.FireDocument;
@@ -43,8 +41,8 @@ public class CacheService {
 
 		caches = new ConcurrentHashMap<>();
 		caches.put(ARCHIVE, archiveCache);
-		caches.put(CIRCOLARE, circolariCache);
-		caches.put(AVVISO, avvisiCache);
+		caches.put(CIRCOLARI, circolariCache);
+		caches.put(AVVISI, avvisiCache);
 
 	}
 
@@ -54,12 +52,12 @@ public class CacheService {
 		archiveCache.open(db.collection(CollectionMappings.ARCHIVE));
 
 		circolariCache.open(db.collection(DOCUMENTS)
-				.whereEqualTo("type", CIRCOLARE)
+				.whereEqualTo("type", CIRCOLARI)
 				.orderBy("publishDate", DESCENDING)
 				.limit(10));
 
 		avvisiCache.open(db.collection(DOCUMENTS)
-				.whereEqualTo("type", AVVISO)
+				.whereEqualTo("type", AVVISI)
 				.orderBy("publishDate", DESCENDING)
 				.limit(10));
 

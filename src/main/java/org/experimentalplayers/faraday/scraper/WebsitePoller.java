@@ -28,8 +28,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.experimentalplayers.faraday.models.DocumentType.AVVISO;
-import static org.experimentalplayers.faraday.models.DocumentType.CIRCOLARE;
+import static org.experimentalplayers.faraday.models.DocumentType.AVVISI;
+import static org.experimentalplayers.faraday.models.DocumentType.CIRCOLARI;
 import static org.experimentalplayers.faraday.utils.CollectionMappings.ARCHIVE;
 
 @SuppressWarnings("ScheduledMethodInspection")
@@ -71,7 +71,7 @@ public class WebsitePoller {
 	// TODO: move segments in methods
 	public int updateSiteDocuments(DocumentType type, String feedUrl, String schoolYear) {
 
-		if(type != CIRCOLARE && type != AVVISO)
+		if(type != CIRCOLARI && type != AVVISI)
 			throw new IllegalArgumentException("Illegal SiteDocument type");
 
 		RSSMain rss;
@@ -174,14 +174,14 @@ public class WebsitePoller {
 	@Scheduled(cron = CRON_EXP_CIRCOLARI, zone = "Europe/Rome")
 	public int updateCircolari() {
 
-		return updateSiteDocuments(CIRCOLARE, webref.getFeedCircolari(), webref.getSchoolYearCircolari());
+		return updateSiteDocuments(CIRCOLARI, webref.getFeedCircolari(), webref.getSchoolYearCircolari());
 
 	}
 
 	@Scheduled(cron = CRON_EXP_AVVISI, zone = "Europe/Rome")
 	public int updateAvvisi() {
 
-		return updateSiteDocuments(AVVISO, webref.getFeedAvvisi(), webref.getSchoolYearAvvisi());
+		return updateSiteDocuments(AVVISI, webref.getFeedAvvisi(), webref.getSchoolYearAvvisi());
 
 	}
 
@@ -260,7 +260,7 @@ public class WebsitePoller {
 		// Get latest archive for circolari
 		dbEntries.values()
 				.stream()
-				.filter(entry -> entry.getType() == CIRCOLARE)
+				.filter(entry -> entry.getType() == CIRCOLARI)
 				.max(Comparator.comparingInt(ArchiveEntry::getStartYear))
 				// Check if WebRef values differ
 				.filter(arc -> !arc.getUrl()
@@ -276,7 +276,7 @@ public class WebsitePoller {
 		// Get latest archive for avvisi
 		dbEntries.values()
 				.stream()
-				.filter(entry -> entry.getType() == AVVISO)
+				.filter(entry -> entry.getType() == AVVISI)
 				.max(Comparator.comparingInt(ArchiveEntry::getStartYear))
 				// Check if WebRef values differ
 				.filter(arc -> !arc.getUrl()

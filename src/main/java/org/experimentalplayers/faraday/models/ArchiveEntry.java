@@ -29,4 +29,12 @@ public class ArchiveEntry implements FireDocument {
 	@ServerTimestamp
 	private Timestamp lastUpdated;
 
+	public String getId() {
+
+		if(id == null || id.isEmpty())
+			id = String.format("%s %d/%d", type.pascalCase(), startYear, endYear - 2000);
+
+		return id;
+	}
+
 }
