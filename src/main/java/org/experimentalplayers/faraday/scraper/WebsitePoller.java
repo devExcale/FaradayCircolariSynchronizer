@@ -232,10 +232,8 @@ public class WebsitePoller {
 
 		} else {
 
-			// Save on db and update cache
+			// Save on db (cache updates by itself)
 			dbHelper.writeArchives(newEntries.values());
-			cache.clearAdded();
-			cache.addAll(newEntries.values());
 
 			log.info("Saved {} new ArchiveEntries", newEntries.size());
 
